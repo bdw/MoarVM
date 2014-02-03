@@ -74,6 +74,7 @@ typedef struct MVMOSHandle MVMOSHandle;
 typedef struct MVMOSHandleBody MVMOSHandleBody;
 typedef struct MVMP6bigint MVMP6bigint;
 typedef struct MVMP6bigintBody MVMP6bigintBody;
+typedef struct MVMP6littlebigintBody MVMP6littlebigintBody;
 typedef struct MVMP6int MVMP6int;
 typedef struct MVMP6intBody MVMP6intBody;
 typedef struct MVMP6intREPRData MVMP6intREPRData;
