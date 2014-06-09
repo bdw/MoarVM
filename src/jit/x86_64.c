@@ -24,18 +24,49 @@
 //|.actionlist actions
 static const unsigned char actions[50] = {
   85,72,137,229,72,129,252,236,239,255,72,137,125,252,248,72,137,117,252,240,
-  72,139,158,233,255,72,129,196,239,93,195,255,72,187,237,237,252,255,211,255,
-  72,139,93,252,240,72,139,155,233,255
+  72,139,142,233,255,72,129,196,239,93,195,255,72,185,237,237,252,255,209,255,
+  72,139,77,252,240,72,139,137,233,255
 };
 
 #line 13 "src/jit/x86_64.dasc"
 
 /* The 'work' registers that MVM supplies will be referenced a lot.
- * So the rbx register will be set up to hold the work space base. */
-//|.define WORK, rbx
+ * So the rcx register will be set up to hold the work space base. */
+//|.define WORK, rcx
+
+/* Also, since I'm using static register allocation (for now, that is), 
+ * I will assign a single register for all valued operations */
+//|.define VALUE, rdx
+#define VALUE_REG 3
 
 const unsigned char * MVM_jit_actions(void) {
     return actions;
+}
+
+static const MVMJitCpuReg x64_cpureg[] = {
+    {  0, 0, "rax", 0 },
+    {  1, 1, "rbx", 0 },
+    {  2, 0, "rcx", 0 },
+    {  3, 0, "rdx", 0 },
+    {  4, 0, "rsi", 0 },
+    {  5, 0, "rdi", 0 },
+    {  6, 1, "rbp", 0 },
+    {  7, 1, "rsp", 0 },
+    {  8, 0, "r8",  0 },
+    {  9, 0, "r9",  0 },
+    { 10, 0, "r10", 0 },
+    { 11, 0, "r11", 0 },
+    { 12, 0, "r12", 0 },
+    { 13, 0, "r13", 0 },
+    { 14, 0, "r14", 0 },
+    { 15, 0, "r15", 0 },
+};
+
+const MVMJitCpuReg * MVM_jit_cpureg(int * num_cpureg_out) {
+    void * new_cpureg_space = malloc(sizeof(x64_cpureg));
+    *num_cpureg_out = sizeof(x64_cpureg) / sizeof(MVMJitCpuReg);
+    /* every invocant will get its own space */
+    return memcpy(new_cpureg_space, x64_cpureg, sizeof(x64_cpureg));
 }
 
 /* A function prologue is always the same in x86 / x64, becuase
@@ -47,13 +78,13 @@ void MVM_jit_emit_prologue(MVMThreadContext *tc, dasm_State **Dst) {
     //| mov rbp, rsp
     //| sub rsp, JIT_FRAME_SIZE
     dasm_put(Dst, 0, JIT_FRAME_SIZE);
-#line 30 "src/jit/x86_64.dasc"
+#line 61 "src/jit/x86_64.dasc"
 
     //| mov [rbp-8], rdi              // thread context
     //| mov [rbp-16], rsi             // mvm frame
     //| mov WORK, [rsi + OFFSET_WORK] // work register base
     dasm_put(Dst, 10, OFFSET_WORK);
-#line 34 "src/jit/x86_64.dasc"
+#line 65 "src/jit/x86_64.dasc"
 }
 
 /* And a function epilogue is also always the same */
@@ -62,8 +93,9 @@ void MVM_jit_emit_epilogue(MVMThreadContext *tc, dasm_State **Dst) {
     //| pop rbp
     //| ret
     dasm_put(Dst, 25, JIT_FRAME_SIZE);
-#line 41 "src/jit/x86_64.dasc"
+#line 72 "src/jit/x86_64.dasc"
 }
+
 
 void MVM_jit_emit_c_call(MVMThreadContext *tc, MVMJitCallC * call_spec, dasm_State **Dst) {
     int i;
@@ -84,10 +116,10 @@ void MVM_jit_emit_c_call(MVMThreadContext *tc, MVMJitCallC * call_spec, dasm_Sta
     //| mov64 WORK, (uintptr_t)call_spec->func_ptr
     //| call WORK
     dasm_put(Dst, 32, (unsigned int)((uintptr_t)call_spec->func_ptr), (unsigned int)(((uintptr_t)call_spec->func_ptr)>>32));
-#line 61 "src/jit/x86_64.dasc"
+#line 93 "src/jit/x86_64.dasc"
     /* Restore the work register pointer */
     //| mov WORK, [rbp-16]             // load the mvm frame
     //| mov WORK, [WORK + OFFSET_WORK] // load the work register pointer
     dasm_put(Dst, 40, OFFSET_WORK);
-#line 64 "src/jit/x86_64.dasc"
+#line 96 "src/jit/x86_64.dasc"
 }
